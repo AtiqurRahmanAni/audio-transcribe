@@ -19,4 +19,11 @@ Node version **20** or higher is required for the frontend, and Python version *
 
 There is a `VITE_BACKEND_URL` variable in the .env file. The value of that variable will be the base url of the backend. For example, if the backend runs on http://localhost:8000, the value of the `VITE_BACKEND_URL` variable will be http://localhost:8000
 
+## How to run backend
+- Go to the backend directory
+- Assign values
+- run `python -m venv venv` and `.\venv\Scripts\activate` to create a new virtual environment and activate it (for windows OS)
+- Run `pip install -r requirements.txt` to install all the dependencies
+- Run `fastapi dev main.py` for run
 
+Project demo: [Link]()
