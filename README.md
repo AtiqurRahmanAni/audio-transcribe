@@ -7,7 +7,7 @@ An audio-to-text generator with timestamp
 - Using GPU accelaration for faster processing
 
 ## Project requirements
-Node version **20** or higher is required for the frontend, and Python version **3.10** or higher is required for the backend to run this project. The project could also work on a smaller version. Minimum **8GB** GPU VRAM is required. 
+Node version **20** or higher is required for the frontend, and Python version **3.10** or higher is required for the backend to run this project. The project could also work on a smaller version. Minimum **8GB** GPU VRAM is required. **React JS** is used to build the frontend, and **FastAPI** is used to build the backend.
 
 ## How to run frontend
 - Go to the frontend directory
