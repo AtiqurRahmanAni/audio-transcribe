@@ -1,4 +1,4 @@
-An audio to text generator with timestamp
+An audio-to-text generator with timestamp
 ![image](https://github.com/user-attachments/assets/155ff819-e206-410e-b9ab-51d7cf27e461)
 
 ## Features
