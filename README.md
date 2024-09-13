@@ -26,4 +26,4 @@ There is a `VITE_BACKEND_URL` variable in the .env file. The value of that varia
 - Run `pip install -r requirements.txt` to install all the dependencies
 - Run `fastapi dev main.py` for run
 
-Project demo: [Link]()
+Project demo: [Link](https://youtu.be/JMygNyHvT4E?si=wQrG7CCYu0EdhgEh)
