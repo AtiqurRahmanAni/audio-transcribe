@@ -1,0 +1,6 @@
+fastapi==0.112.2
+torch==2.4.1
+torchaudio==2.4.1
+torchsummary==1.5.1
+torchvision==0.19.1
+openai-whisper==20231117

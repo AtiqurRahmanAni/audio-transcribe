@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 import whisper
 import torch
 import os
@@ -8,7 +9,6 @@ import torch
 import gc
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-
 from whisper.audio import (
     HOP_LENGTH,
     N_FRAMES,
@@ -24,13 +24,22 @@ from whisper.utils import (
     format_timestamp,
     make_safe,
 )
+import subprocess
+from utils import deleteFiles
 
 os.environ['HSA_OVERRIDE_GFX_VERSION'] = '10.3.0'
 os.environ['HIP_VISIBLE_DEVICES'] = '0'
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], 
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
+UPLOAD_DIR = "./uploaded_files"
 
 html = """
 <!DOCTYPE html>
@@ -51,7 +60,7 @@ html = """
             if (eventSource) {
                 eventSource.close();  // Close any existing connection
             }
-            eventSource = new EventSource('http://127.0.0.1:8000/stream');
+            eventSource = new EventSource('http://127.0.0.1:8000/transcribe');
             
             eventSource.onmessage = function(event) {
                 const message = document.createElement('li');
@@ -72,18 +81,20 @@ html = """
 executor = ThreadPoolExecutor(max_workers=1)
 
 
-async def event_stream():
+async def event_stream(audio):
+    
+    gc.collect()
+    torch.cuda.empty_cache()
 
-   # Simulate loading the model
-    yield "data: Loading model...\n\n"
+    yield "event: loadingModel\ndata: Loading model\n\n"
 
     loop = asyncio.get_running_loop()
     model = await loop.run_in_executor(executor, whisper.load_model, "medium", device)
 
-    yield "data: Model loaded successfully.\n\n"
+    yield "event: loadingDone\ndata: Model loaded\n\n"
 
-    audio = "../../01-audiotrack_01.mp3"
-    temperature = 0.15
+    # audio = "../../01-audiotrack_01.mp3"
+    temperature = 0.25
     compression_ratio_threshold = 2.4
     logprob_threshold = -1.0
     no_speech_threshold = 1
@@ -109,9 +120,9 @@ async def event_stream():
     if not model.is_multilingual:
         decode_options["language"] = "en"
     else:
-        print(
-            "Detecting language using up to the first 30 seconds. Use `--language` to specify the language"
-        )
+        # print(
+        #     "Detecting language using up to the first 30 seconds. Use `--language` to specify the language"
+        # )
 
         mel_segment = await loop.run_in_executor(executor, pad_or_trim, mel, N_FRAMES)
         mel_segment = mel_segment.to(model.device).to(dtype)
@@ -119,10 +130,10 @@ async def event_stream():
         _, probs = await loop.run_in_executor(executor, model.detect_language, mel_segment)
         # _, probs = model.detect_language(mel_segment)
         decode_options["language"] = max(probs, key=probs.get)
-        print(
-            f"Detected language: {LANGUAGES[decode_options['language']].title()}"
-        )
-        yield f"data: Detected language: {LANGUAGES[decode_options['language']].title()}\n\n"
+        # print(
+        #     f"Detected language: {LANGUAGES[decode_options['language']].title()}"
+        # )
+        # yield f"data: Detected language: {LANGUAGES[decode_options['language']].title()}\n\n"
 
     language = None
     task = decode_options.get("task", "transcribe")
@@ -206,6 +217,8 @@ async def event_stream():
             "compression_ratio": result.compression_ratio,
             "no_speech_prob": result.no_speech_prob,
         }
+
+    yield "event: generating\ndata: Generating\n\n"
 
     while seek < content_frames:
         time_offset = float(seek * HOP_LENGTH / SAMPLE_RATE)
@@ -304,18 +317,35 @@ async def event_stream():
             start, end, text = segment["start"], segment["end"], segment["text"]
             line = f"[{format_timestamp(start)} --> {format_timestamp(end)}] {text}"
             line = make_safe(line)
-            print(line)
+            # print(line)
             yield f'data: {line}\n\n'
 
+    yield "event: end\ndata: Done\n\n"
     del model
     gc.collect()
     torch.cuda.empty_cache()
 
 
-@app.get("/stream")
-async def stream():
-    return StreamingResponse(event_stream(), media_type="text/event-stream")
+@app.post("/transcribe")
+async def upload_file(audioFile: UploadFile):
 
+    if not os.path.exists(UPLOAD_DIR):
+        os.makedirs(UPLOAD_DIR)
+    else:
+        deleteFiles()
+
+    file_path = os.path.join(UPLOAD_DIR, audioFile.filename)
+
+    with open(file_path, "wb") as f:
+        contents = await audioFile.read()
+        f.write(contents)
+
+    return {"message": "File uploaded successfully"}
+    
+@app.get("/transcribe")
+async def transcribe():
+    file_path = os.path.join(UPLOAD_DIR, os.listdir(UPLOAD_DIR)[0])
+    return StreamingResponse(event_stream(file_path), media_type="text/event-stream")
 
 @app.get("/")
 async def get():

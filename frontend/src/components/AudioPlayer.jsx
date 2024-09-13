@@ -105,7 +105,7 @@ const AudioPlayer = ({ audioFile }) => {
       </div>
       <div className="flex justify-center mt-4">
         <button onClick={togglePlay} className="text-4xl text-[#7b2cbf]">
-          {isPlaying ? <FaPlayCircle /> : <FaPauseCircle />}
+          {!isPlaying ? <FaPlayCircle className="" /> : <FaPauseCircle />}
         </button>
       </div>
     </div>
